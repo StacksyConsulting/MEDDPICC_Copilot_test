@@ -44,18 +44,15 @@ const ClosePath = () => {
   const [askedQuestions, setAskedQuestions] = useState([]); // Track asked questions
   const [currentSpeaker, setCurrentSpeaker] = useState(1); // Track current speaker number
   const [speakerColors] = useState(['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500']); // Colors for up to 4 speakers
+  const transcriptEndRef = useRef(null);
   const recognitionRef = useRef(null);
-  const transcriptContainerRef = useRef(null);
   const transcriptCountRef = useRef(0);
   const lastSpeechTimeRef = useRef(Date.now());
   const silenceThresholdMs = 2000; // 2 seconds of silence = new speaker
 
-  // Auto-scroll transcript container only — scoped to that element, won't affect the page
+  // Scroll to bottom of transcript
   useEffect(() => {
-    const container = transcriptContainerRef.current;
-    if (container) {
-      container.scrollTop = container.scrollHeight;
-    }
+    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcript]);
 
   // Initialize Web Speech API for live transcription
@@ -478,76 +475,41 @@ const ClosePath = () => {
             )}
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Live Transcript - Full Width */}
-            <div className="bg-white border-2 border-slate-900 shadow-lg">
-              <div className="bg-slate-900 text-white px-4 py-3 border-b-2 border-slate-700">
-                <h2 className="font-bold text-lg flex items-center gap-2">
-                  <Mic className="w-5 h-5" />
-                  Live Transcript
-                </h2>
-              </div>
-              <div ref={transcriptContainerRef} className="p-4 h-96 overflow-y-auto space-y-3">
-                {transcript.map((entry, idx) => {
-                  // Extract speaker number (e.g., "Speaker 1" -> 1)
-                  const speakerNum = entry.speaker.includes('Speaker') 
-                    ? parseInt(entry.speaker.split(' ')[1]) || 1
-                    : 1;
-                  
-                  // Assign color based on speaker number
-                  const colorClass = speakerColors[(speakerNum - 1) % speakerColors.length];
-                  
-                  return (
-                    <div key={idx} className="flex gap-3 justify-start">
-                      <div className={`max-w-[80%] ${colorClass} text-white px-4 py-3 rounded-lg shadow-md`}>
-                        <div className="text-xs font-bold mb-1 opacity-90">
-                          {entry.speaker.toUpperCase()}
-                        </div>
-                        <p className="text-sm leading-relaxed">{entry.text}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Intent Score and Suggested Questions - Side by Side */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Intent Score */}
-              {intentScore && (
-                <div className={`border-2 border-slate-900 p-5 shadow-lg ${
-                  intentScore.level === 'high' ? 'bg-emerald-50' :
-                  intentScore.level === 'medium' ? 'bg-amber-50' :
-                  'bg-red-50'
-                }`}>
-                  <div className="text-center mb-4">
-                    <p className="text-xs font-bold text-slate-600 mb-2">INTENT CONFIDENCE</p>
-                    <div className={`inline-block px-6 py-3 ${
-                      intentScore.level === 'high' ? 'bg-emerald-500' :
-                      intentScore.level === 'medium' ? 'bg-amber-500' :
-                      'bg-red-500'
-                    } text-white`}>
-                      <span className="text-3xl font-black">{intentScore.level.toUpperCase()}</span>
-                    </div>
-                  </div>
-                  {intentScore.reasoning && intentScore.reasoning.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-xs font-bold text-slate-600 mb-2">REASONING:</p>
-                      {intentScore.reasoning.map((reason, idx) => (
-                        <p key={idx} className="text-sm text-slate-700 mb-1">• {reason}</p>
-                      ))}
-                    </div>
-                  )}
-                  {intentScore.deal_risk_flags && intentScore.deal_risk_flags.length > 0 && (
-                    <div>
-                      <p className="text-xs font-bold text-slate-600 mb-2">RISK FLAGS:</p>
-                      {intentScore.deal_risk_flags.map((flag, idx) => (
-                        <p key={idx} className="text-sm text-red-700 font-medium mb-1">⚠️ {flag}</p>
-                      ))}
-                    </div>
-                  )}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column - Transcript & Questions */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Live Transcript */}
+              <div className="bg-white border-2 border-slate-900 shadow-lg">
+                <div className="bg-slate-900 text-white px-4 py-3 border-b-2 border-slate-700">
+                  <h2 className="font-bold text-lg flex items-center gap-2">
+                    <Mic className="w-5 h-5" />
+                    Live Transcript
+                  </h2>
                 </div>
-              )}
+                <div className="p-4 h-96 overflow-y-auto space-y-3">
+                  {transcript.map((entry, idx) => {
+                    // Extract speaker number (e.g., "Speaker 1" -> 1)
+                    const speakerNum = entry.speaker.includes('Speaker') 
+                      ? parseInt(entry.speaker.split(' ')[1]) || 1
+                      : 1;
+                    
+                    // Assign color based on speaker number
+                    const colorClass = speakerColors[(speakerNum - 1) % speakerColors.length];
+                    
+                    return (
+                      <div key={idx} className="flex gap-3 justify-start">
+                        <div className={`max-w-[80%] ${colorClass} text-white px-4 py-3 rounded-lg shadow-md`}>
+                          <div className="text-xs font-bold mb-1 opacity-90">
+                            {entry.speaker.toUpperCase()}
+                          </div>
+                          <p className="text-sm leading-relaxed">{entry.text}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={transcriptEndRef} />
+                </div>
+              </div>
 
               {/* Suggested Questions */}
               {suggestedQuestions.length > 0 && (
@@ -589,63 +551,102 @@ const ClosePath = () => {
               )}
             </div>
 
-            {/* MEDDPICC Scorecard - Horizontal Grid */}
-            {meddpiccState && (
-              <div>
-                <h2 className="text-2xl font-black text-slate-900 mb-4">MEDDPICC Scorecard</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <MEDDPICCCard 
-                    title="Metrics" 
-                    icon={TrendingUp}
-                    data={meddpiccState.metrics}
-                    color="#3b82f6"
-                  />
-                  <MEDDPICCCard 
-                    title="Economic Buyer" 
-                    icon={Users}
-                    data={meddpiccState.economic_buyer}
-                    color="#8b5cf6"
-                  />
-                  <MEDDPICCCard 
-                    title="Decision Process" 
-                    icon={Clock}
-                    data={meddpiccState.decision_process}
-                    color="#f59e0b"
-                  />
-                  <MEDDPICCCard 
-                    title="Decision Criteria" 
-                    icon={CheckCircle2}
-                    data={meddpiccState.decision_criteria}
-                    color="#10b981"
-                  />
-                  <MEDDPICCCard 
-                    title="Pain" 
-                    icon={Target}
-                    data={meddpiccState.pain}
-                    color="#ef4444"
-                  />
-                  <MEDDPICCCard 
-                    title="Implications" 
-                    icon={AlertCircle}
-                    data={meddpiccState.implications}
-                    color="#f97316"
-                  />
-                  <MEDDPICCCard 
-                    title="Champion" 
-                    icon={Award}
-                    data={meddpiccState.champion}
-                    color="#06b6d4"
-                  />
-                  <MEDDPICCCard 
-                    title="Competition" 
-                    icon={ChevronRight}
-                    data={meddpiccState.competition}
-                    color="#6366f1"
-                  />
+            {/* Right Column - Intent Score */}
+            <div className="space-y-6">
+              {/* Intent Score */}
+              {intentScore && (
+                <div className={`border-2 border-slate-900 p-5 shadow-lg ${
+                  intentScore.level === 'high' ? 'bg-emerald-50' :
+                  intentScore.level === 'medium' ? 'bg-amber-50' :
+                  'bg-red-50'
+                }`}>
+                  <div className="text-center mb-4">
+                    <p className="text-xs font-bold text-slate-600 mb-2">INTENT CONFIDENCE</p>
+                    <div className={`inline-block px-6 py-3 ${
+                      intentScore.level === 'high' ? 'bg-emerald-500' :
+                      intentScore.level === 'medium' ? 'bg-amber-500' :
+                      'bg-red-500'
+                    } text-white`}>
+                      <span className="text-3xl font-black">{intentScore.level.toUpperCase()}</span>
+                    </div>
+                  </div>
+                  {intentScore.reasoning && intentScore.reasoning.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-xs font-bold text-slate-600 mb-2">REASONING:</p>
+                      {intentScore.reasoning.map((reason, idx) => (
+                        <p key={idx} className="text-sm text-slate-700 mb-1">• {reason}</p>
+                      ))}
+                    </div>
+                  )}
+                  {intentScore.deal_risk_flags && intentScore.deal_risk_flags.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-slate-600 mb-2">RISK FLAGS:</p>
+                      {intentScore.deal_risk_flags.map((flag, idx) => (
+                        <p key={idx} className="text-sm text-red-700 font-medium mb-1">⚠️ {flag}</p>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
+
+          {/* MEDDPICC Scorecard - Full Width Horizontal Grid */}
+          {meddpiccState && (
+            <div className="mt-6">
+              <h2 className="text-2xl font-black text-slate-900 mb-4">MEDDPICC Scorecard</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <MEDDPICCCard 
+                  title="Metrics" 
+                  icon={TrendingUp}
+                  data={meddpiccState.metrics}
+                  color="#3b82f6"
+                />
+                <MEDDPICCCard 
+                  title="Economic Buyer" 
+                  icon={Users}
+                  data={meddpiccState.economic_buyer}
+                  color="#8b5cf6"
+                />
+                <MEDDPICCCard 
+                  title="Decision Process" 
+                  icon={Clock}
+                  data={meddpiccState.decision_process}
+                  color="#f59e0b"
+                />
+                <MEDDPICCCard 
+                  title="Decision Criteria" 
+                  icon={CheckCircle2}
+                  data={meddpiccState.decision_criteria}
+                  color="#10b981"
+                />
+                <MEDDPICCCard 
+                  title="Pain" 
+                  icon={Target}
+                  data={meddpiccState.pain}
+                  color="#ef4444"
+                />
+                <MEDDPICCCard 
+                  title="Implications" 
+                  icon={AlertCircle}
+                  data={meddpiccState.implications}
+                  color="#f97316"
+                />
+                <MEDDPICCCard 
+                  title="Champion" 
+                  icon={Award}
+                  data={meddpiccState.champion}
+                  color="#06b6d4"
+                />
+                <MEDDPICCCard 
+                  title="Competition" 
+                  icon={ChevronRight}
+                  data={meddpiccState.competition}
+                  color="#6366f1"
+                />
+              </div>
+            </div>
+          )}
         )}
       </div>
     </div>
