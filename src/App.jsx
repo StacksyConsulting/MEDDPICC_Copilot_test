@@ -44,15 +44,18 @@ const ClosePath = () => {
   const [askedQuestions, setAskedQuestions] = useState([]); // Track asked questions
   const [currentSpeaker, setCurrentSpeaker] = useState(1); // Track current speaker number
   const [speakerColors] = useState(['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500']); // Colors for up to 4 speakers
-  const transcriptEndRef = useRef(null);
   const recognitionRef = useRef(null);
+  const transcriptContainerRef = useRef(null);
   const transcriptCountRef = useRef(0);
   const lastSpeechTimeRef = useRef(Date.now());
   const silenceThresholdMs = 2000; // 2 seconds of silence = new speaker
 
-  // Scroll to bottom of transcript
+  // Auto-scroll transcript container only - scoped to that element
   useEffect(() => {
-    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = transcriptContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [transcript]);
 
   // Initialize Web Speech API for live transcription
@@ -486,7 +489,7 @@ const ClosePath = () => {
                     Live Transcript
                   </h2>
                 </div>
-                <div className="p-4 h-96 overflow-y-auto space-y-3">
+                <div ref={transcriptContainerRef} className="p-4 h-96 overflow-y-auto space-y-3">
                   {transcript.map((entry, idx) => {
                     // Extract speaker number (e.g., "Speaker 1" -> 1)
                     const speakerNum = entry.speaker.includes('Speaker') 
@@ -507,7 +510,6 @@ const ClosePath = () => {
                       </div>
                     );
                   })}
-                  <div ref={transcriptEndRef} />
                 </div>
               </div>
 
