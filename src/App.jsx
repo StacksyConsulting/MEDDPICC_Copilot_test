@@ -478,9 +478,10 @@ const ClosePath = () => {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column - Transcript & Questions */}
-            <div className="lg:col-span-2 space-y-6">
+          <div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column - Transcript & Questions */}
+              <div className="lg:col-span-2 space-y-6">
               {/* Live Transcript */}
               <div className="bg-white border-2 border-slate-900 shadow-lg">
                 <div className="bg-slate-900 text-white px-4 py-3 border-b-2 border-slate-700">
@@ -649,6 +650,7 @@ const ClosePath = () => {
               </div>
             </div>
           )}
+          </div>
         )}
       </div>
     </div>
