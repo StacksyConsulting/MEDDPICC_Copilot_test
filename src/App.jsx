@@ -223,7 +223,17 @@ const ClosePath = () => {
       });
 
       if (!response.ok) {
-        throw new Error('API request failed');
+        // If running in demo mode and API fails, use mock data
+        if (!useLiveMode) {
+          console.log('Using mock data for demo mode');
+          const mockResult = generateMockAnalysis(currentTranscript);
+          setMeddpiccState(mockResult.meddpicc);
+          setSuggestedQuestions(mockResult.suggested_questions.slice(0, 5));
+          setIntentScore(mockResult.intent_confidence);
+          setIsProcessing(false);
+          return;
+        }
+        throw new Error(`API request failed: ${response.status}`);
       }
 
       const result = await response.json();
@@ -240,10 +250,109 @@ const ClosePath = () => {
 
     } catch (error) {
       console.error('Analysis error:', error);
-      setError('Analysis failed - check API key');
+      
+      // If in demo mode, use mock data instead of showing error
+      if (!useLiveMode) {
+        console.log('API failed, using mock data for demo');
+        const mockResult = generateMockAnalysis(currentTranscript);
+        setMeddpiccState(mockResult.meddpicc);
+        setSuggestedQuestions(mockResult.suggested_questions.slice(0, 5));
+        setIntentScore(mockResult.intent_confidence);
+      } else {
+        setError('Analysis failed - check API setup');
+      }
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Generate mock analysis for demo mode
+  const generateMockAnalysis = (transcript) => {
+    return {
+      meddpicc: {
+        metrics: {
+          status: "detected",
+          evidence: ["8 hours per week wasted", "20% of selling time"],
+          confidence: 0.85,
+          missing_info: ["Specific revenue impact"]
+        },
+        economic_buyer: {
+          status: "weak",
+          evidence: ["CRO approves budget", "$50K annually"],
+          confidence: 0.6,
+          missing_info: ["CRO's name", "Exact decision authority"]
+        },
+        decision_process: {
+          status: "detected",
+          evidence: ["Technical evaluation", "Security sign-off", "6-8 weeks timeline"],
+          confidence: 0.9,
+          missing_info: []
+        },
+        decision_criteria: {
+          status: "weak",
+          evidence: [],
+          confidence: 0.3,
+          missing_info: ["What features matter most", "Success criteria"]
+        },
+        pain: {
+          status: "detected",
+          evidence: ["Wasting time on unqualified leads", "Deals going nowhere"],
+          confidence: 0.9,
+          missing_info: []
+        },
+        implications: {
+          status: "detected",
+          evidence: ["VP of Sales set goal for pipeline quality", "Need to close more with same headcount"],
+          confidence: 0.75,
+          missing_info: ["Consequences of not solving"]
+        },
+        champion: {
+          status: "not_detected",
+          evidence: [],
+          confidence: 0.1,
+          missing_info: ["Internal advocate", "Who's excited about this"]
+        },
+        competition: {
+          status: "not_detected",
+          evidence: [],
+          confidence: 0.1,
+          missing_info: ["Current alternatives", "Other vendors being considered"]
+        }
+      },
+      suggested_questions: [
+        {
+          meddpicc_area: "champion",
+          priority: "high",
+          question: "Who on your team is most excited about solving this problem?",
+          why_now: "Need to identify an internal advocate"
+        },
+        {
+          meddpicc_area: "competition",
+          priority: "high",
+          question: "Are you evaluating any other solutions alongside ours?",
+          why_now: "Competitive landscape unclear"
+        },
+        {
+          meddpicc_area: "decision_criteria",
+          priority: "medium",
+          question: "What are the top 3 criteria you'll use to make your decision?",
+          why_now: "Need to understand evaluation factors"
+        }
+      ],
+      intent_confidence: {
+        level: "medium",
+        reasoning: [
+          "Clear pain identified with quantified impact",
+          "Decision process outlined with timeline",
+          "Budget authority mentioned but not confirmed"
+        ],
+        deal_risk_flags: [
+          "No champion identified",
+          "Competition landscape unknown",
+          "Economic buyer not directly engaged"
+        ]
+      }
+    };
   };
 
   const startCall = () => {
@@ -553,7 +662,7 @@ const ClosePath = () => {
               )}
             </div>
 
-            {/* Right Column - Intent Score */}
+            {/* Right Column - MEDDPICC Scorecard */}
             <div className="space-y-6">
               {/* Intent Score */}
               {intentScore && (
@@ -590,65 +699,62 @@ const ClosePath = () => {
                   )}
                 </div>
               )}
+
+              {/* MEDDPICC Components */}
+              {meddpiccState && (
+                <>
+                  <MEDDPICCCard 
+                    title="Metrics" 
+                    icon={TrendingUp}
+                    data={meddpiccState.metrics}
+                    color="#3b82f6"
+                  />
+                  <MEDDPICCCard 
+                    title="Economic Buyer" 
+                    icon={Users}
+                    data={meddpiccState.economic_buyer}
+                    color="#8b5cf6"
+                  />
+                  <MEDDPICCCard 
+                    title="Decision Process" 
+                    icon={Clock}
+                    data={meddpiccState.decision_process}
+                    color="#f59e0b"
+                  />
+                  <MEDDPICCCard 
+                    title="Decision Criteria" 
+                    icon={CheckCircle2}
+                    data={meddpiccState.decision_criteria}
+                    color="#10b981"
+                  />
+                  <MEDDPICCCard 
+                    title="Pain" 
+                    icon={Target}
+                    data={meddpiccState.pain}
+                    color="#ef4444"
+                  />
+                  <MEDDPICCCard 
+                    title="Implications" 
+                    icon={AlertCircle}
+                    data={meddpiccState.implications}
+                    color="#f97316"
+                  />
+                  <MEDDPICCCard 
+                    title="Champion" 
+                    icon={Award}
+                    data={meddpiccState.champion}
+                    color="#06b6d4"
+                  />
+                  <MEDDPICCCard 
+                    title="Competition" 
+                    icon={ChevronRight}
+                    data={meddpiccState.competition}
+                    color="#6366f1"
+                  />
+                </>
+              )}
             </div>
           </div>
-
-          {/* MEDDPICC Scorecard - Full Width Horizontal Grid */}
-          {meddpiccState && (
-            <div className="mt-6">
-              <h2 className="text-2xl font-black text-slate-900 mb-4">MEDDPICC Scorecard</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <MEDDPICCCard 
-                  title="Metrics" 
-                  icon={TrendingUp}
-                  data={meddpiccState.metrics}
-                  color="#3b82f6"
-                />
-                <MEDDPICCCard 
-                  title="Economic Buyer" 
-                  icon={Users}
-                  data={meddpiccState.economic_buyer}
-                  color="#8b5cf6"
-                />
-                <MEDDPICCCard 
-                  title="Decision Process" 
-                  icon={Clock}
-                  data={meddpiccState.decision_process}
-                  color="#f59e0b"
-                />
-                <MEDDPICCCard 
-                  title="Decision Criteria" 
-                  icon={CheckCircle2}
-                  data={meddpiccState.decision_criteria}
-                  color="#10b981"
-                />
-                <MEDDPICCCard 
-                  title="Pain" 
-                  icon={Target}
-                  data={meddpiccState.pain}
-                  color="#ef4444"
-                />
-                <MEDDPICCCard 
-                  title="Implications" 
-                  icon={AlertCircle}
-                  data={meddpiccState.implications}
-                  color="#f97316"
-                />
-                <MEDDPICCCard 
-                  title="Champion" 
-                  icon={Award}
-                  data={meddpiccState.champion}
-                  color="#06b6d4"
-                />
-                <MEDDPICCCard 
-                  title="Competition" 
-                  icon={ChevronRight}
-                  data={meddpiccState.competition}
-                  color="#6366f1"
-                />
-              </div>
-            </div>
-          )}
         )}
       </div>
     </div>
