@@ -707,7 +707,7 @@ const ClosePath = () => {
           {meddpiccState && (
             <div className="mt-6">
               <h2 className="text-2xl font-black text-slate-900 mb-4">MEDDPICC Scorecard</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <MEDDPICCCard 
                   title="Metrics" 
                   icon={TrendingUp}
