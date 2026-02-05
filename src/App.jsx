@@ -560,18 +560,6 @@ const ClosePath = () => {
               <strong> Demo Mode:</strong> Pre-recorded simulation
             </p>
             
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <label className="flex items-center gap-2 text-lg cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={useLiveMode}
-                  onChange={(e) => setUseLiveMode(e.target.checked)}
-                  className="w-5 h-5"
-                />
-                <span className="font-semibold">Use Live Mode (Microphone)</span>
-              </label>
-            </div>
-
             <button
               onClick={startCall}
               className="px-8 py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold text-lg transition-all flex items-center gap-3 mx-auto shadow-lg hover:shadow-xl"
@@ -624,15 +612,17 @@ const ClosePath = () => {
               </div>
 
               {/* Suggested Questions */}
-              {suggestedQuestions.length > 0 && (
-                <div className="bg-amber-50 border-2 border-amber-400 p-5 shadow-lg">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="w-6 h-6 text-amber-600" />
-                      <h3 className="font-black text-xl text-slate-900">Suggested Questions</h3>
-                    </div>
-                    <span className="text-xs text-slate-600">Click to mark as asked</span>
+              <div className="bg-amber-50 border-2 border-amber-400 p-5 shadow-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-6 h-6 text-amber-600" />
+                    <h3 className="font-black text-xl text-slate-900">Suggested Questions</h3>
                   </div>
+                  {suggestedQuestions.length > 0 && (
+                    <span className="text-xs text-slate-600">Click to mark as asked</span>
+                  )}
+                </div>
+                {suggestedQuestions.length > 0 ? (
                   <div className="space-y-3">
                     {suggestedQuestions.map((q, idx) => (
                       <div 
@@ -659,21 +649,25 @@ const ClosePath = () => {
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <p className="text-sm text-slate-600 italic">Questions will appear as the conversation progresses...</p>
+                )}
+              </div>
             </div>
 
             {/* Right Column - Intent Score */}
             <div className="space-y-6">
               {/* Intent Score */}
-              {intentScore && (
-                <div className={`border-2 border-slate-900 p-5 shadow-lg ${
+              <div className={`border-2 border-slate-900 p-5 shadow-lg ${
+                intentScore ? (
                   intentScore.level === 'high' ? 'bg-emerald-50' :
                   intentScore.level === 'medium' ? 'bg-amber-50' :
                   'bg-red-50'
-                }`}>
-                  <div className="text-center mb-4">
-                    <p className="text-xs font-bold text-slate-600 mb-2">INTENT CONFIDENCE</p>
+                ) : 'bg-slate-50'
+              }`}>
+                <div className="text-center mb-4">
+                  <p className="text-xs font-bold text-slate-600 mb-2">INTENT CONFIDENCE</p>
+                  {intentScore ? (
                     <div className={`inline-block px-6 py-3 ${
                       intentScore.level === 'high' ? 'bg-emerald-500' :
                       intentScore.level === 'medium' ? 'bg-amber-500' :
@@ -681,84 +675,144 @@ const ClosePath = () => {
                     } text-white`}>
                       <span className="text-3xl font-black">{intentScore.level.toUpperCase()}</span>
                     </div>
-                  </div>
-                  {intentScore.reasoning && intentScore.reasoning.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-xs font-bold text-slate-600 mb-2">REASONING:</p>
-                      {intentScore.reasoning.map((reason, idx) => (
-                        <p key={idx} className="text-sm text-slate-700 mb-1">• {reason}</p>
-                      ))}
-                    </div>
-                  )}
-                  {intentScore.deal_risk_flags && intentScore.deal_risk_flags.length > 0 && (
-                    <div>
-                      <p className="text-xs font-bold text-slate-600 mb-2">RISK FLAGS:</p>
-                      {intentScore.deal_risk_flags.map((flag, idx) => (
-                        <p key={idx} className="text-sm text-red-700 font-medium mb-1">⚠️ {flag}</p>
-                      ))}
+                  ) : (
+                    <div className="inline-block px-6 py-3 bg-slate-300 text-white">
+                      <span className="text-3xl font-black">PENDING</span>
                     </div>
                   )}
                 </div>
-              )}
+                {intentScore && intentScore.reasoning && intentScore.reasoning.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-xs font-bold text-slate-600 mb-2">REASONING:</p>
+                    {intentScore.reasoning.map((reason, idx) => (
+                      <p key={idx} className="text-sm text-slate-700 mb-1">• {reason}</p>
+                    ))}
+                  </div>
+                )}
+                {intentScore && intentScore.deal_risk_flags && intentScore.deal_risk_flags.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold text-slate-600 mb-2">RISK FLAGS:</p>
+                    {intentScore.deal_risk_flags.map((flag, idx) => (
+                      <p key={idx} className="text-sm text-red-700 font-medium mb-1">⚠️ {flag}</p>
+                    ))}
+                  </div>
+                )}
+                {!intentScore && (
+                  <p className="text-sm text-slate-600 italic text-center">Analysis will appear as the conversation progresses...</p>
+                )}
+              </div>
             </div>
           </div>
 
           {/* MEDDPICC Scorecard - Full Width, 2 Rows of 4 */}
-          {meddpiccState && (
-            <div className="mt-6">
-              <h2 className="text-2xl font-black text-slate-900 mb-4">MEDDPICC Scorecard</h2>
-              <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                <MEDDPICCCard 
-                  title="Metrics" 
-                  icon={TrendingUp}
-                  data={meddpiccState.metrics}
-                  color="#3b82f6"
-                />
-                <MEDDPICCCard 
-                  title="Economic Buyer" 
-                  icon={Users}
-                  data={meddpiccState.economic_buyer}
-                  color="#8b5cf6"
-                />
-                <MEDDPICCCard 
-                  title="Decision Process" 
-                  icon={Clock}
-                  data={meddpiccState.decision_process}
-                  color="#f59e0b"
-                />
-                <MEDDPICCCard 
-                  title="Decision Criteria" 
-                  icon={CheckCircle2}
-                  data={meddpiccState.decision_criteria}
-                  color="#10b981"
-                />
-                <MEDDPICCCard 
-                  title="Pain" 
-                  icon={Target}
-                  data={meddpiccState.pain}
-                  color="#ef4444"
-                />
-                <MEDDPICCCard 
-                  title="Implications" 
-                  icon={AlertCircle}
-                  data={meddpiccState.implications}
-                  color="#f97316"
-                />
-                <MEDDPICCCard 
-                  title="Champion" 
-                  icon={Award}
-                  data={meddpiccState.champion}
-                  color="#06b6d4"
-                />
-                <MEDDPICCCard 
-                  title="Competition" 
-                  icon={ChevronRight}
-                  data={meddpiccState.competition}
-                  color="#6366f1"
-                />
-              </div>
+          <div className="mt-6">
+            <h2 className="text-2xl font-black text-slate-900 mb-4">MEDDPICC Scorecard</h2>
+            <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+              {meddpiccState ? (
+                <>
+                  <MEDDPICCCard 
+                    title="Metrics" 
+                    icon={TrendingUp}
+                    data={meddpiccState.metrics}
+                    color="#3b82f6"
+                  />
+                  <MEDDPICCCard 
+                    title="Economic Buyer" 
+                    icon={Users}
+                    data={meddpiccState.economic_buyer}
+                    color="#8b5cf6"
+                  />
+                  <MEDDPICCCard 
+                    title="Decision Process" 
+                    icon={Clock}
+                    data={meddpiccState.decision_process}
+                    color="#f59e0b"
+                  />
+                  <MEDDPICCCard 
+                    title="Decision Criteria" 
+                    icon={CheckCircle2}
+                    data={meddpiccState.decision_criteria}
+                    color="#10b981"
+                  />
+                  <MEDDPICCCard 
+                    title="Pain" 
+                    icon={Target}
+                    data={meddpiccState.pain}
+                    color="#ef4444"
+                  />
+                  <MEDDPICCCard 
+                    title="Implications" 
+                    icon={AlertCircle}
+                    data={meddpiccState.implications}
+                    color="#f97316"
+                  />
+                  <MEDDPICCCard 
+                    title="Champion" 
+                    icon={Award}
+                    data={meddpiccState.champion}
+                    color="#06b6d4"
+                  />
+                  <MEDDPICCCard 
+                    title="Competition" 
+                    icon={ChevronRight}
+                    data={meddpiccState.competition}
+                    color="#6366f1"
+                  />
+                </>
+              ) : (
+                <>
+                  <MEDDPICCCard 
+                    title="Metrics" 
+                    icon={TrendingUp}
+                    data={{status: "not_detected", evidence: [], confidence: 0, missing_info: []}}
+                    color="#3b82f6"
+                  />
+                  <MEDDPICCCard 
+                    title="Economic Buyer" 
+                    icon={Users}
+                    data={{status: "not_detected", evidence: [], confidence: 0, missing_info: []}}
+                    color="#8b5cf6"
+                  />
+                  <MEDDPICCCard 
+                    title="Decision Process" 
+                    icon={Clock}
+                    data={{status: "not_detected", evidence: [], confidence: 0, missing_info: []}}
+                    color="#f59e0b"
+                  />
+                  <MEDDPICCCard 
+                    title="Decision Criteria" 
+                    icon={CheckCircle2}
+                    data={{status: "not_detected", evidence: [], confidence: 0, missing_info: []}}
+                    color="#10b981"
+                  />
+                  <MEDDPICCCard 
+                    title="Pain" 
+                    icon={Target}
+                    data={{status: "not_detected", evidence: [], confidence: 0, missing_info: []}}
+                    color="#ef4444"
+                  />
+                  <MEDDPICCCard 
+                    title="Implications" 
+                    icon={AlertCircle}
+                    data={{status: "not_detected", evidence: [], confidence: 0, missing_info: []}}
+                    color="#f97316"
+                  />
+                  <MEDDPICCCard 
+                    title="Champion" 
+                    icon={Award}
+                    data={{status: "not_detected", evidence: [], confidence: 0, missing_info: []}}
+                    color="#06b6d4"
+                  />
+                  <MEDDPICCCard 
+                    title="Competition" 
+                    icon={ChevronRight}
+                    data={{status: "not_detected", evidence: [], confidence: 0, missing_info: []}}
+                    color="#6366f1"
+                  />
+                </>
+              )}
             </div>
-          )}
+          </div>
           </div>
         )}
       </div>
