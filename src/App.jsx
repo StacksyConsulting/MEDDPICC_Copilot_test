@@ -756,6 +756,7 @@ const ClosePath = () => {
               </div>
             </div>
           )}
+          </div>
         )}
       </div>
     </div>
