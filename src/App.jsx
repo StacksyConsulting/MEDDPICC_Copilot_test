@@ -44,15 +44,18 @@ const ClosePath = () => {
   const [askedQuestions, setAskedQuestions] = useState([]); // Track asked questions
   const [currentSpeaker, setCurrentSpeaker] = useState(1); // Track current speaker number
   const [speakerColors] = useState(['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500']); // Colors for up to 4 speakers
-  const transcriptEndRef = useRef(null);
   const recognitionRef = useRef(null);
+  const transcriptContainerRef = useRef(null);
   const transcriptCountRef = useRef(0);
   const lastSpeechTimeRef = useRef(Date.now());
   const silenceThresholdMs = 2000; // 2 seconds of silence = new speaker
 
-  // Scroll to bottom of transcript
+  // Auto-scroll transcript container only — scoped to that element, won't affect the page
   useEffect(() => {
-    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = transcriptContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [transcript]);
 
   // Initialize Web Speech API for live transcription
@@ -220,17 +223,7 @@ const ClosePath = () => {
       });
 
       if (!response.ok) {
-        // If running in demo mode and API fails, use mock data
-        if (!useLiveMode) {
-          console.log('Using mock data for demo mode');
-          const mockResult = generateMockAnalysis(currentTranscript);
-          setMeddpiccState(mockResult.meddpicc);
-          setSuggestedQuestions(mockResult.suggested_questions.slice(0, 5));
-          setIntentScore(mockResult.intent_confidence);
-          setIsProcessing(false);
-          return;
-        }
-        throw new Error(`API request failed: ${response.status}`);
+        throw new Error('API request failed');
       }
 
       const result = await response.json();
@@ -247,109 +240,10 @@ const ClosePath = () => {
 
     } catch (error) {
       console.error('Analysis error:', error);
-      
-      // If in demo mode, use mock data instead of showing error
-      if (!useLiveMode) {
-        console.log('API failed, using mock data for demo');
-        const mockResult = generateMockAnalysis(currentTranscript);
-        setMeddpiccState(mockResult.meddpicc);
-        setSuggestedQuestions(mockResult.suggested_questions.slice(0, 5));
-        setIntentScore(mockResult.intent_confidence);
-      } else {
-        setError('Analysis failed - check API setup');
-      }
+      setError('Analysis failed - check API key');
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  // Generate mock analysis for demo mode
-  const generateMockAnalysis = (transcript) => {
-    return {
-      meddpicc: {
-        metrics: {
-          status: "detected",
-          evidence: ["8 hours per week wasted", "20% of selling time"],
-          confidence: 0.85,
-          missing_info: ["Specific revenue impact"]
-        },
-        economic_buyer: {
-          status: "weak",
-          evidence: ["CRO approves budget", "$50K annually"],
-          confidence: 0.6,
-          missing_info: ["CRO's name", "Exact decision authority"]
-        },
-        decision_process: {
-          status: "detected",
-          evidence: ["Technical evaluation", "Security sign-off", "6-8 weeks timeline"],
-          confidence: 0.9,
-          missing_info: []
-        },
-        decision_criteria: {
-          status: "weak",
-          evidence: [],
-          confidence: 0.3,
-          missing_info: ["What features matter most", "Success criteria"]
-        },
-        pain: {
-          status: "detected",
-          evidence: ["Wasting time on unqualified leads", "Deals going nowhere"],
-          confidence: 0.9,
-          missing_info: []
-        },
-        implications: {
-          status: "detected",
-          evidence: ["VP of Sales set goal for pipeline quality", "Need to close more with same headcount"],
-          confidence: 0.75,
-          missing_info: ["Consequences of not solving"]
-        },
-        champion: {
-          status: "not_detected",
-          evidence: [],
-          confidence: 0.1,
-          missing_info: ["Internal advocate", "Who's excited about this"]
-        },
-        competition: {
-          status: "not_detected",
-          evidence: [],
-          confidence: 0.1,
-          missing_info: ["Current alternatives", "Other vendors being considered"]
-        }
-      },
-      suggested_questions: [
-        {
-          meddpicc_area: "champion",
-          priority: "high",
-          question: "Who on your team is most excited about solving this problem?",
-          why_now: "Need to identify an internal advocate"
-        },
-        {
-          meddpicc_area: "competition",
-          priority: "high",
-          question: "Are you evaluating any other solutions alongside ours?",
-          why_now: "Competitive landscape unclear"
-        },
-        {
-          meddpicc_area: "decision_criteria",
-          priority: "medium",
-          question: "What are the top 3 criteria you'll use to make your decision?",
-          why_now: "Need to understand evaluation factors"
-        }
-      ],
-      intent_confidence: {
-        level: "medium",
-        reasoning: [
-          "Clear pain identified with quantified impact",
-          "Decision process outlined with timeline",
-          "Budget authority mentioned but not confirmed"
-        ],
-        deal_risk_flags: [
-          "No champion identified",
-          "Competition landscape unknown",
-          "Economic buyer not directly engaged"
-        ]
-      }
-    };
   };
 
   const startCall = () => {
@@ -595,7 +489,7 @@ const ClosePath = () => {
                     Live Transcript
                   </h2>
                 </div>
-                <div className="p-4 h-96 overflow-y-auto space-y-3">
+                <div ref={transcriptContainerRef} className="p-4 h-96 overflow-y-auto space-y-3">
                   {transcript.map((entry, idx) => {
                     // Extract speaker number (e.g., "Speaker 1" -> 1)
                     const speakerNum = entry.speaker.includes('Speaker') 
@@ -616,7 +510,6 @@ const ClosePath = () => {
                       </div>
                     );
                   })}
-                  <div ref={transcriptEndRef} />
                 </div>
               </div>
 
@@ -756,7 +649,6 @@ const ClosePath = () => {
               </div>
             </div>
           )}
-          </div>
         )}
       </div>
     </div>

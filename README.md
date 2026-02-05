@@ -1,128 +1,135 @@
-# ClosePath - Real-Time Sales Qualification Intelligence
+# MEDDPICC Copilot - Real-Time Sales Qualification
 
-AI-powered MEDDPICC qualification copilot for live sales calls.
+A real-time AI-powered copilot that helps B2B SaaS sales reps qualify prospect intent during live calls using the MEDDPICC framework.
 
-## 🚀 Quick Start
+## Features
 
-1. **Clone this repository**
-2. **Install dependencies**: `npm install`
-3. **Set up API key**: See [SETUP_API.md](SETUP_API.md)
-4. **Deploy to Vercel**: Connect your GitHub repo to Vercel
+- 🎯 **Real-Time Qualification**: Automatically detects MEDDPICC signals during live calls
+- 🤖 **AI-Powered Analysis**: Uses Claude Sonnet 4 to analyze conversations in real-time
+- 💡 **Smart Suggestions**: Provides contextual follow-up questions to fill qualification gaps
+- 📊 **Intent Scoring**: Calculates prospect intent confidence (Low/Medium/High)
+- ⚡ **Zero Manual Entry**: Automatically populates MEDDPICC scorecards
 
-## 📁 Project Structure
+## MEDDPICC Components Tracked
+
+- **Metrics**: Measurable impact, targets, KPIs, timelines
+- **Economic Buyer**: Budget authority, decision makers
+- **Decision Process**: Steps, timeline, approval criteria
+- **Pain**: Current problems and their consequences
+
+## Tech Stack
+
+- React 18
+- Tailwind CSS
+- Lucide React (icons)
+- Claude API (Anthropic)
+- Vite (build tool)
+
+## Local Development
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Run development server:**
+   ```bash
+   npm run dev
+   ```
+
+3. **Build for production:**
+   ```bash
+   npm run build
+   ```
+
+## Deploy to Vercel
+
+### Option 1: Deploy via Vercel CLI
+
+1. **Install Vercel CLI:**
+   ```bash
+   npm i -g vercel
+   ```
+
+2. **Deploy:**
+   ```bash
+   vercel
+   ```
+
+3. **Follow the prompts** to link your project and deploy
+
+### Option 2: Deploy via Vercel Dashboard
+
+1. **Push code to GitHub** (or GitLab/Bitbucket)
+
+2. **Go to [vercel.com](https://vercel.com)** and sign in
+
+3. **Click "New Project"**
+
+4. **Import your repository**
+
+5. **Vercel will auto-detect Vite** and configure build settings
+
+6. **Click "Deploy"**
+
+### Environment Variables
+
+Note: The current implementation includes Claude API calls directly from the frontend. For production use, you should:
+
+1. Create a backend API endpoint that proxies Claude API calls
+2. Add your Anthropic API key as an environment variable in Vercel:
+   - Go to Project Settings → Environment Variables
+   - Add `ANTHROPIC_API_KEY` with your API key
+
+## Project Structure
 
 ```
-closepath/
-├── api/
-│   └── analyze.js              ← Backend: Claude API integration
-├── src/
-│   ├── App.jsx                 ← Main ClosePath component (CURRENT VERSION)
-│   ├── main.jsx                ← Entry point for Vite
-│   └── index.css               ← Tailwind CSS imports
-├── index.html                  ← HTML entry point
-├── package.json                ← Dependencies
-├── vite.config.js              ← Vite build configuration
-├── tailwind.config.js          ← Tailwind CSS config
-├── postcss.config.js           ← PostCSS config
-├── vercel.json                 ← Vercel deployment config
-├── SETUP_API.md                ← API setup instructions
-├── README.md                   ← This file
-│
-├── meddpicc-copilot.jsx        ← Legacy component (reference only)
-├── index.jsx                   ← Legacy entry point (reference only)
-└── TestApp.jsx                 ← Test component (reference only)
+meddpicc-copilot/
+├── index.html              # HTML entry point
+├── index.js                # React app entry point
+├── meddpicc-copilot.jsx    # Main React component
+├── package.json            # Dependencies
+├── vite.config.js          # Vite configuration
+├── tailwind.config.js      # Tailwind CSS config
+├── postcss.config.js       # PostCSS config
+├── vercel.json             # Vercel deployment config
+└── README.md               # This file
 ```
 
-## 🎯 Features
+## Usage
 
-### Current Version (src/App.jsx)
-- ✅ **Live microphone transcription** using Web Speech API
-- ✅ **Speaker detection** (alternates between 2 speakers)
-- ✅ **Real-time MEDDPICC analysis** powered by Claude Sonnet 4
-- ✅ **All 8 MEDDPICC components**:
-  - Metrics
-  - Economic Buyer
-  - Decision Process
-  - Decision Criteria
-  - Pain
-  - Implications
-  - Champion
-  - Competition
-- ✅ **Suggested questions** (max 5, click to dismiss)
-- ✅ **Intent confidence scoring** (Low/Medium/High)
-- ✅ **Horizontal MEDDPICC grid** for easy scanning
-- ✅ **Demo mode** for testing without microphone
+1. Click **"Start Demo Call"** to begin a simulated sales call
+2. Watch the live transcript populate with prospect conversation
+3. Review the **MEDDPICC Scorecard** as it updates in real-time
+4. Check **Suggested Questions** to ask next
+5. Monitor the **Intent Confidence** score
+6. Click **"End Call"** to see final recommendations
 
-## 🔧 Development
+## MVP Scope
 
-### Local Development
-```bash
-npm install
-npm run dev
-```
+This MVP focuses exclusively on:
+- Early-stage qualification and intent detection
+- Real-time MEDDPICC signal detection
+- Automated scorecard population
+- Clear go/no-go recommendations
 
-### Build for Production
-```bash
-npm run build
-```
+**What this is NOT:**
+- Not a full CRM or CRM replacement
+- Not a full conversation intelligence platform
+- Not a sales coaching tool
+- Not a forecasting or pipeline management tool
 
-### Deploy to Vercel
-1. Push to GitHub
-2. Connect repository to Vercel
-3. Add `ANTHROPIC_API_KEY` environment variable
-4. Deploy!
+## Success Metrics
 
-## 🎨 Design System
+- ✅ Reduction in time spent on low-intent deals
+- ✅ Higher conversion rate from first call to qualified opportunity
+- ✅ Faster disqualification of non-serious prospects
+- ✅ Clear view of deal seriousness after each call
 
-See [ClosePath-Design-System](../ClosePath-Design-System/) folder for:
-- Brand colors and typography
-- Component library
-- Lovable.ai quick start guide
+## License
 
-## 📝 API Setup
+Proprietary - All rights reserved
 
-See [SETUP_API.md](SETUP_API.md) for detailed instructions on:
-- Getting your Anthropic API key
-- Adding it to Vercel
-- Troubleshooting common issues
+## Support
 
-## 💰 Costs
-
-- **Claude Sonnet 4**: ~$3 per million input tokens
-- **Per analysis**: ~$0.001-0.003
-- Very affordable for demo and production use
-
-## 🔒 Security
-
-- API keys stored securely in Vercel environment variables
-- Backend API route keeps keys server-side
-- Never commit API keys to code or GitHub
-
-## 🌐 Browser Support
-
-### Full Support (Recommended)
-- ✅ Chrome
-- ✅ Edge
-
-### Limited Support
-- ⚠️ Firefox (no Web Speech API)
-- ⚠️ Safari (limited Web Speech API)
-
-## 📚 Learn More
-
-- [Anthropic Claude API Docs](https://docs.anthropic.com)
-- [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API)
-- [MEDDPICC Framework](https://www.meddic.com/)
-
-## 🐛 Troubleshooting
-
-Common issues and solutions in [SETUP_API.md](SETUP_API.md)
-
-## 📦 Version History
-
-- **v2**: Fixed JSX nesting for MEDDPICC horizontal layout
-- **v1**: Initial version with all features
-
----
-
-**Built with**: React, Vite, Tailwind CSS, Claude Sonnet 4, Web Speech API
+For questions or issues, please contact the development team.

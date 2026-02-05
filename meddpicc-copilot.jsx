@@ -36,44 +36,10 @@ const MEDDPICCCopilot = () => {
   const [suggestedQuestions, setSuggestedQuestions] = useState([]);
   const [intentScore, setIntentScore] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState(null);
   const [callId] = useState(`call_${Date.now()}`);
   const [simulationIndex, setSimulationIndex] = useState(0);
   const transcriptEndRef = useRef(null);
-
-  // System prompt for Claude API
-  const SYSTEM_PROMPT = `You are a Real-Time MEDDPICC Qualification Copilot for B2B SaaS sales calls.
-
-Primary Objective: Help the sales rep qualify prospect intent early by:
-- Detecting MEDDPICC signals in the live transcript
-- Identifying missing/weak qualification areas
-- Suggesting short, high-impact follow-up questions
-- Producing an end-of-call MEDDPICC scorecard + Intent Confidence Score + Next Action
-
-Constraints (Non-Negotiable):
-- Do NOT coach the rep on tone, empathy, objection handling, or talk tracks
-- Do NOT summarize the whole call unless it supports qualification
-- Do NOT invent details that were not said in the transcript
-- Be conservative. If something is unclear, mark it as "Weak/Unclear" or "Not Detected"
-- Optimize for minimal interruption: prompts must be brief and optional
-
-Focus only on these MEDDPICC elements:
-- Metrics (measurable impact, targets, KPIs)
-- Economic Buyer (budget authority, decision maker)
-- Decision Process (steps, timeline, criteria)
-- Pain (current problem + consequences)
-
-Output Format: Return ONLY valid JSON with this structure:
-{
-  "meddpicc": {
-    "metrics": {"status": "detected|weak|not_detected", "evidence": [], "confidence": 0.0, "missing_info": []},
-    "economic_buyer": {"status": "detected|weak|not_detected", "evidence": [], "confidence": 0.0, "missing_info": []},
-    "decision_process": {"status": "detected|weak|not_detected", "evidence": [], "confidence": 0.0, "missing_info": []},
-    "pain": {"status": "detected|weak|not_detected", "evidence": [], "confidence": 0.0, "missing_info": []}
-  },
-  "suggested_questions": [{"meddpicc_area": "string", "priority": "high|medium|low", "question": "string", "why_now": "string"}],
-  "intent_confidence": {"level": "low|medium|high", "reasoning": [], "deal_risk_flags": []},
-  "recommended_next_action": {"action": "proceed|re_qualify|disengage", "rationale": "string", "immediate_next_steps": []}
-}`;
 
   // Scroll to bottom of transcript
   useEffect(() => {
@@ -105,61 +71,25 @@ Output Format: Return ONLY valid JSON with this structure:
 
   const analyzeTranscript = async (currentTranscript) => {
     setIsProcessing(true);
+    setError(null);
 
     try {
-      const userPrompt = `You are receiving a live transcript stream. Update MEDDPICC state conservatively and suggest up to 3 questions maximum.
-
-Call ID: ${callId}
-Timestamp: ${new Date().toISOString()}
-
-Current Transcript:
-${currentTranscript.map(t => `${t.speaker.toUpperCase()}: ${t.text}`).join('\n')}
-
-Tasks:
-1. Update statuses for Metrics, Economic Buyer, Decision Process, Pain
-2. Extract evidence from the transcript
-3. Identify what is missing/weak
-4. Suggest up to 3 questions max, highest impact first
-5. Output strict JSON only following the schema
-
-Scoring Guidelines:
-- Metrics: Detected if measurable impact/KPIs/timelines stated
-- Economic Buyer: Detected if budget authority/decision maker identified
-- Decision Process: Detected if steps/timeline/criteria described
-- Pain: Detected if clear current problem + consequences described
-
-Intent Confidence:
-- High: Pain + Decision Process detected AND (Metrics OR Economic Buyer detected)
-- Medium: Pain detected but Decision Process/Economic Buyer unclear
-- Low: Pain weak/not detected OR no Decision Process and unclear buyer`;
-
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("/api/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: SYSTEM_PROMPT,
-          messages: [
-            { role: "user", content: userPrompt }
-          ],
+          transcript: currentTranscript,
+          callId: callId
         })
       });
 
-      const data = await response.json();
-      
-      // Extract JSON from response
-      let jsonText = data.content
-        .filter(item => item.type === "text")
-        .map(item => item.text)
-        .join("");
+      if (!response.ok) {
+        throw new Error('API request failed');
+      }
 
-      // Clean up markdown code blocks if present
-      jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
-      const result = JSON.parse(jsonText);
+      const result = await response.json();
 
       setMeddpiccState(result.meddpicc);
       setSuggestedQuestions(result.suggested_questions || []);
@@ -167,6 +97,7 @@ Intent Confidence:
 
     } catch (error) {
       console.error('Analysis error:', error);
+      setError('Analysis failed - check API key');
     } finally {
       setIsProcessing(false);
     }
