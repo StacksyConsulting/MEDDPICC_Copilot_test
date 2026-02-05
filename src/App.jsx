@@ -581,7 +581,7 @@ const ClosePath = () => {
             </button>
             
             {useLiveMode && (
-              <p className="text-xs text-slate-500 mt-4">
+              <p className="text-xs text-slate-500 mt-4 text-center">
                 Your browser will request microphone permission
               </p>
             )}
@@ -707,7 +707,7 @@ const ClosePath = () => {
           {meddpiccState && (
             <div className="mt-6">
               <h2 className="text-2xl font-black text-slate-900 mb-4">MEDDPICC Scorecard</h2>
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
                 <MEDDPICCCard 
                   title="Metrics" 
                   icon={TrendingUp}
