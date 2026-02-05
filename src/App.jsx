@@ -126,9 +126,13 @@ const ClosePath = () => {
         setTranscript(prev => {
           const updated = [...prev, newEntry];
           
-          // Trigger analysis every 2 entries
+          // SMART TRIGGERING: Analyze on keywords OR every 3 entries
+          const hasKeywords = /budget|decision|problem|pain|timeline|process|buyer|cost|\$/i.test(finalTranscript);
+          
           transcriptCountRef.current += 1;
-          if (transcriptCountRef.current % 2 === 0) {
+          
+          // Trigger immediately if important keywords detected, otherwise every 3 entries
+          if (hasKeywords || transcriptCountRef.current % 3 === 0) {
             analyzeTranscript(updated);
           }
           
@@ -193,8 +197,8 @@ const ClosePath = () => {
         setTranscript(prev => [...prev, newEntry]);
         setSimulationIndex(prev => prev + 1);
 
-        // Trigger AI analysis every 2-3 transcript entries
-        if (simulationIndex % 2 === 1) {
+        // COST OPTIMIZATION: Trigger AI analysis every 3 transcript entries
+        if (simulationIndex % 3 === 0) {
           analyzeTranscript([...transcript, newEntry]);
         }
       } else {
@@ -210,6 +214,12 @@ const ClosePath = () => {
     setIsProcessing(true);
     setError(null);
 
+    // INSTANT FEEDBACK: Show "analyzing" pulse on tiles immediately
+    // This makes it feel responsive even while API processes
+    
+    // COST OPTIMIZATION: Only send last 15 entries (keeps context manageable)
+    const recentTranscript = currentTranscript.slice(-15);
+
     try {
       const response = await fetch("/api/analyze", {
         method: "POST",
@@ -217,7 +227,7 @@ const ClosePath = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          transcript: currentTranscript,
+          transcript: recentTranscript,
           callId: callId
         })
       });
@@ -266,45 +276,69 @@ const ClosePath = () => {
     }
   };
 
-  // Generate mock analysis for demo mode
+  // Generate mock analysis for demo mode - PROGRESSIVE based on transcript
   const generateMockAnalysis = (transcript) => {
+    const transcriptLength = transcript.length;
+    const fullText = transcript.map(t => t.text).join(' ').toLowerCase();
+    
+    // Extract actual evidence from transcript
+    const extractEvidence = (keywords) => {
+      return transcript
+        .map(t => t.text)
+        .filter(text => keywords.some(kw => text.toLowerCase().includes(kw)))
+        .slice(0, 2); // Max 2 pieces of evidence
+    };
+    
+    // Progressive detection based on what's actually been said
+    const hasMetrics = fullText.includes('hours') || fullText.includes('time') || fullText.includes('%') || fullText.includes('week');
+    const hasBudget = fullText.includes('$') || fullText.includes('budget') || fullText.includes('cro') || fullText.includes('50k');
+    const hasProcess = fullText.includes('evaluation') || fullText.includes('sign-off') || fullText.includes('weeks') || fullText.includes('timeline');
+    const hasPain = fullText.includes('problem') || fullText.includes('frustrated') || fullText.includes('waste') || fullText.includes('time');
+    const hasImplications = fullText.includes('goal') || fullText.includes('need') || fullText.includes('must') || fullText.includes('vp');
+    
+    const metricsEvidence = extractEvidence(['hours', 'week', '%', 'time']);
+    const budgetEvidence = extractEvidence(['$', 'budget', 'cro', '50k', 'annually']);
+    const processEvidence = extractEvidence(['evaluation', 'sign-off', 'weeks', 'timeline', 'process']);
+    const painEvidence = extractEvidence(['waste', 'problem', 'frustrated', 'nowhere']);
+    const implicationsEvidence = extractEvidence(['goal', 'vp', 'need', 'close more']);
+    
     return {
       meddpicc: {
         metrics: {
-          status: "detected",
-          evidence: ["8 hours per week wasted", "20% of selling time"],
-          confidence: 0.85,
-          missing_info: ["Specific revenue impact"]
+          status: transcriptLength >= 3 && hasMetrics ? "detected" : transcriptLength >= 2 && hasMetrics ? "weak" : "not_detected",
+          evidence: metricsEvidence,
+          confidence: transcriptLength >= 3 && hasMetrics ? 0.85 : transcriptLength >= 2 && hasMetrics ? 0.4 : 0.1,
+          missing_info: metricsEvidence.length > 0 ? ["Specific revenue impact"] : ["Quantified business metrics"]
         },
         economic_buyer: {
-          status: "weak",
-          evidence: ["CRO approves budget", "$50K annually"],
-          confidence: 0.6,
-          missing_info: ["CRO's name", "Exact decision authority"]
+          status: transcriptLength >= 5 && hasBudget ? "weak" : "not_detected",
+          evidence: budgetEvidence,
+          confidence: transcriptLength >= 5 && hasBudget ? 0.6 : 0.1,
+          missing_info: budgetEvidence.length > 0 ? ["CRO's name", "Exact decision authority"] : ["Budget authority", "Decision maker"]
         },
         decision_process: {
-          status: "detected",
-          evidence: ["Technical evaluation", "Security sign-off", "6-8 weeks timeline"],
-          confidence: 0.9,
-          missing_info: []
+          status: transcriptLength >= 6 && hasProcess ? "detected" : transcriptLength >= 4 && hasProcess ? "weak" : "not_detected",
+          evidence: processEvidence,
+          confidence: transcriptLength >= 6 && hasProcess ? 0.9 : transcriptLength >= 4 && hasProcess ? 0.5 : 0.1,
+          missing_info: processEvidence.length >= 2 ? [] : ["Buying process steps", "Timeline"]
         },
         decision_criteria: {
           status: "weak",
           evidence: [],
-          confidence: 0.3,
+          confidence: transcriptLength >= 4 ? 0.3 : 0.1,
           missing_info: ["What features matter most", "Success criteria"]
         },
         pain: {
-          status: "detected",
-          evidence: ["Wasting time on unqualified leads", "Deals going nowhere"],
-          confidence: 0.9,
-          missing_info: []
+          status: transcriptLength >= 2 && hasPain ? "detected" : transcriptLength >= 1 && hasPain ? "weak" : "not_detected",
+          evidence: painEvidence,
+          confidence: transcriptLength >= 2 && hasPain ? 0.9 : transcriptLength >= 1 && hasPain ? 0.4 : 0.1,
+          missing_info: painEvidence.length > 0 ? [] : ["Current problem details"]
         },
         implications: {
-          status: "detected",
-          evidence: ["VP of Sales set goal for pipeline quality", "Need to close more with same headcount"],
-          confidence: 0.75,
-          missing_info: ["Consequences of not solving"]
+          status: transcriptLength >= 5 && hasImplications ? "detected" : transcriptLength >= 3 && hasImplications ? "weak" : "not_detected",
+          evidence: implicationsEvidence,
+          confidence: transcriptLength >= 5 && hasImplications ? 0.75 : transcriptLength >= 3 && hasImplications ? 0.4 : 0.1,
+          missing_info: implicationsEvidence.length > 0 ? ["Consequences of not solving"] : ["Why this matters now"]
         },
         champion: {
           status: "not_detected",
@@ -316,10 +350,10 @@ const ClosePath = () => {
           status: "not_detected",
           evidence: [],
           confidence: 0.1,
-          missing_info: ["Current alternatives", "Other vendors being considered"]
+          missing_info: ["Current alternatives", "Other vendors"]
         }
       },
-      suggested_questions: [
+      suggested_questions: transcriptLength >= 4 ? [
         {
           meddpicc_area: "champion",
           priority: "high",
@@ -338,18 +372,28 @@ const ClosePath = () => {
           question: "What are the top 3 criteria you'll use to make your decision?",
           why_now: "Need to understand evaluation factors"
         }
-      ],
+      ] : [],
       intent_confidence: {
-        level: "medium",
-        reasoning: [
-          "Clear pain identified with quantified impact",
-          "Decision process outlined with timeline",
-          "Budget authority mentioned but not confirmed"
+        level: transcriptLength >= 6 ? "medium" : transcriptLength >= 3 ? "low" : "low",
+        reasoning: transcriptLength >= 6 ? [
+          "Pain signals detected in conversation",
+          "Process discussion indicates active evaluation",
+          "Budget authority mentioned"
+        ] : transcriptLength >= 3 ? [
+          "Initial discovery signals present",
+          "Building qualification context"
+        ] : [
+          "Early stage conversation"
         ],
-        deal_risk_flags: [
-          "No champion identified",
-          "Competition landscape unknown",
-          "Economic buyer not directly engaged"
+        deal_risk_flags: transcriptLength >= 6 ? [
+          "No champion identified yet",
+          "Competition unknown",
+          "Decision criteria unclear"
+        ] : transcriptLength >= 3 ? [
+          "Limited qualification data",
+          "Key stakeholders unclear"
+        ] : [
+          "Very early stage"
         ]
       }
     };
@@ -393,7 +437,9 @@ const ClosePath = () => {
     const statusLabel = STATUS_LABELS[data.status];
 
     return (
-      <div className="bg-white border-2 border-slate-900 p-4 hover:shadow-lg transition-all duration-200">
+      <div className={`bg-white border-2 border-slate-900 p-4 hover:shadow-lg transition-all duration-200 ${
+        isProcessing ? 'animate-pulse' : ''
+      }`}>
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
             <Icon className="w-5 h-5" style={{ color }} />
