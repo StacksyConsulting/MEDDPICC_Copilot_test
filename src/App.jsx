@@ -662,7 +662,7 @@ const ClosePath = () => {
               )}
             </div>
 
-            {/* Right Column - MEDDPICC Scorecard */}
+            {/* Right Column - Intent Score */}
             <div className="space-y-6">
               {/* Intent Score */}
               {intentScore && (
@@ -699,62 +699,65 @@ const ClosePath = () => {
                   )}
                 </div>
               )}
-
-              {/* MEDDPICC Components */}
-              {meddpiccState && (
-                <>
-                  <MEDDPICCCard 
-                    title="Metrics" 
-                    icon={TrendingUp}
-                    data={meddpiccState.metrics}
-                    color="#3b82f6"
-                  />
-                  <MEDDPICCCard 
-                    title="Economic Buyer" 
-                    icon={Users}
-                    data={meddpiccState.economic_buyer}
-                    color="#8b5cf6"
-                  />
-                  <MEDDPICCCard 
-                    title="Decision Process" 
-                    icon={Clock}
-                    data={meddpiccState.decision_process}
-                    color="#f59e0b"
-                  />
-                  <MEDDPICCCard 
-                    title="Decision Criteria" 
-                    icon={CheckCircle2}
-                    data={meddpiccState.decision_criteria}
-                    color="#10b981"
-                  />
-                  <MEDDPICCCard 
-                    title="Pain" 
-                    icon={Target}
-                    data={meddpiccState.pain}
-                    color="#ef4444"
-                  />
-                  <MEDDPICCCard 
-                    title="Implications" 
-                    icon={AlertCircle}
-                    data={meddpiccState.implications}
-                    color="#f97316"
-                  />
-                  <MEDDPICCCard 
-                    title="Champion" 
-                    icon={Award}
-                    data={meddpiccState.champion}
-                    color="#06b6d4"
-                  />
-                  <MEDDPICCCard 
-                    title="Competition" 
-                    icon={ChevronRight}
-                    data={meddpiccState.competition}
-                    color="#6366f1"
-                  />
-                </>
-              )}
             </div>
           </div>
+
+          {/* MEDDPICC Scorecard - Full Width Horizontal Grid */}
+          {meddpiccState && (
+            <div className="mt-6">
+              <h2 className="text-2xl font-black text-slate-900 mb-4">MEDDPICC Scorecard</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <MEDDPICCCard 
+                  title="Metrics" 
+                  icon={TrendingUp}
+                  data={meddpiccState.metrics}
+                  color="#3b82f6"
+                />
+                <MEDDPICCCard 
+                  title="Economic Buyer" 
+                  icon={Users}
+                  data={meddpiccState.economic_buyer}
+                  color="#8b5cf6"
+                />
+                <MEDDPICCCard 
+                  title="Decision Process" 
+                  icon={Clock}
+                  data={meddpiccState.decision_process}
+                  color="#f59e0b"
+                />
+                <MEDDPICCCard 
+                  title="Decision Criteria" 
+                  icon={CheckCircle2}
+                  data={meddpiccState.decision_criteria}
+                  color="#10b981"
+                />
+                <MEDDPICCCard 
+                  title="Pain" 
+                  icon={Target}
+                  data={meddpiccState.pain}
+                  color="#ef4444"
+                />
+                <MEDDPICCCard 
+                  title="Implications" 
+                  icon={AlertCircle}
+                  data={meddpiccState.implications}
+                  color="#f97316"
+                />
+                <MEDDPICCCard 
+                  title="Champion" 
+                  icon={Award}
+                  data={meddpiccState.champion}
+                  color="#06b6d4"
+                />
+                <MEDDPICCCard 
+                  title="Competition" 
+                  icon={ChevronRight}
+                  data={meddpiccState.competition}
+                  color="#6366f1"
+                />
+              </div>
+            </div>
+          )}
         )}
       </div>
     </div>
