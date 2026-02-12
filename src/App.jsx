@@ -43,6 +43,7 @@ const ClosePath = () => {
   const [isListening, setIsListening] = useState(false);
   const [askedQuestions, setAskedQuestions] = useState([]); // Track asked questions
   const [currentSpeaker, setCurrentSpeaker] = useState(1); // Track current speaker number
+  const [showExportMenu, setShowExportMenu] = useState(false); // Export dropdown toggle
   const [speakerColors] = useState(['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500']); // Colors for up to 4 speakers
   const recognitionRef = useRef(null);
   const transcriptContainerRef = useRef(null);
@@ -851,53 +852,46 @@ const ClosePath = () => {
                 )}
               </button>
 
-              {/* Export Dropdown - Only show when call is complete and has data */}
+              {/* Export Dropdown - Show white box when call is complete and has data */}
               {!isCallActive && meddpiccState && (
-                <div className="relative group">
-                  <button className="p-3 rounded-lg font-bold transition-all bg-blue-500 hover:bg-blue-600 flex items-center gap-2">
-                    <Download className="w-5 h-5" />
-                  </button>
-                  
-                  {/* Export Dropdown Menu */}
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border-2 border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                    <div className="py-2">
-                      <div className="px-4 py-2 border-b border-slate-200">
-                        <p className="text-xs font-bold text-slate-600 uppercase">Export Call Analysis</p>
-                      </div>
-                      
-                      <button
-                        onClick={exportToNotion}
-                        className="w-full px-4 py-3 text-left hover:bg-slate-100 transition-colors flex items-center gap-3"
-                      >
-                        <span className="text-2xl">📝</span>
-                        <div>
-                          <div className="font-bold text-slate-900">Notion</div>
-                          <div className="text-xs text-slate-600">Copy to clipboard</div>
-                        </div>
-                      </button>
-                      
-                      <button
-                        onClick={exportToPDF}
-                        className="w-full px-4 py-3 text-left hover:bg-slate-100 transition-colors flex items-center gap-3"
-                      >
-                        <span className="text-2xl">📄</span>
-                        <div>
-                          <div className="font-bold text-slate-900">PDF/HTML</div>
-                          <div className="text-xs text-slate-600">Visual report</div>
-                        </div>
-                      </button>
-                      
-                      <button
-                        onClick={exportToAppleNotes}
-                        className="w-full px-4 py-3 text-left hover:bg-slate-100 transition-colors flex items-center gap-3"
-                      >
-                        <span className="text-2xl">🍎</span>
-                        <div>
-                          <div className="font-bold text-slate-900">Notes / OneNote</div>
-                          <div className="text-xs text-slate-600">Plain text format</div>
-                        </div>
-                      </button>
+                <div className="w-64 bg-white rounded-lg shadow-xl border-2 border-slate-200">
+                  <div className="py-2">
+                    <div className="px-4 py-2 border-b border-slate-200">
+                      <p className="text-xs font-bold text-slate-600 uppercase">Export Call Analysis</p>
                     </div>
+                    
+                    <button
+                      onClick={() => { exportToNotion(); }}
+                      className="w-full px-4 py-3 text-left hover:bg-slate-100 transition-colors flex items-center gap-3"
+                    >
+                      <span className="text-2xl">📝</span>
+                      <div>
+                        <div className="font-bold text-slate-900">Notion</div>
+                        <div className="text-xs text-slate-600">Copy to clipboard</div>
+                      </div>
+                    </button>
+                    
+                    <button
+                      onClick={() => { exportToPDF(); }}
+                      className="w-full px-4 py-3 text-left hover:bg-slate-100 transition-colors flex items-center gap-3"
+                    >
+                      <span className="text-2xl">📄</span>
+                      <div>
+                        <div className="font-bold text-slate-900">PDF/HTML</div>
+                        <div className="text-xs text-slate-600">Visual report</div>
+                      </div>
+                    </button>
+                    
+                    <button
+                      onClick={() => { exportToAppleNotes(); }}
+                      className="w-full px-4 py-3 text-left hover:bg-slate-100 transition-colors flex items-center gap-3"
+                    >
+                      <span className="text-2xl">🍎</span>
+                      <div>
+                        <div className="font-bold text-slate-900">Notes / OneNote</div>
+                        <div className="text-xs text-slate-600">Plain text format</div>
+                      </div>
+                    </button>
                   </div>
                 </div>
               )}
