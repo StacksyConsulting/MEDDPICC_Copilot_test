@@ -459,23 +459,6 @@ const ClosePath = () => {
     URL.revokeObjectURL(url);
   };
 
-  const exportToJSON = () => {
-    const data = {
-      timestamp: new Date().toISOString(),
-      meddpicc: meddpiccState,
-      intent_score: intentScore,
-      suggested_questions: suggestedQuestions,
-      transcript: transcript
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `closepath-data-${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
   const generateExportContent = () => {
     const date = new Date().toLocaleDateString();
     const time = new Date().toLocaleTimeString();
@@ -543,47 +526,205 @@ const ClosePath = () => {
       });
     }
 
-    // Transcript
-    markdown += `## 💬 Transcript\n\n`;
-    transcript.forEach(entry => {
-      const speaker = entry.speaker === 'rep' ? 'Rep' : 'Prospect';
-      markdown += `**${speaker}:** ${entry.text}\n\n`;
-    });
+    // HTML format with VISUAL TILES
+    const intentLevel = intentScore?.level || 'low';
+    const intentColor = intentLevel === 'high' ? '#10b981' : intentLevel === 'medium' ? '#f59e0b' : '#ef4444';
+    const intentBg = intentLevel === 'high' ? '#d1fae5' : intentLevel === 'medium' ? '#fef3c7' : '#fee2e2';
+    
+    let meddpiccTilesHtml = '';
+    if (meddpiccState) {
+      const sections = [
+        { key: 'metrics', title: 'Metrics', color: '#3b82f6' },
+        { key: 'economic_buyer', title: 'Economic Buyer', color: '#8b5cf6' },
+        { key: 'decision_process', title: 'Decision Process', color: '#f59e0b' },
+        { key: 'decision_criteria', title: 'Decision Criteria', color: '#10b981' },
+        { key: 'pain', title: 'Pain', color: '#ef4444' },
+        { key: 'implications', title: 'Implications', color: '#f97316' },
+        { key: 'champion', title: 'Champion', color: '#06b6d4' },
+        { key: 'competition', title: 'Competition', color: '#6366f1' }
+      ];
 
-    // HTML format (for PDF)
+      sections.forEach(({ key, title, color }) => {
+        const data = meddpiccState[key];
+        if (data) {
+          const statusColor = data.status === 'detected' ? '#10b981' : data.status === 'weak' ? '#f59e0b' : '#cbd5e1';
+          const statusLabel = STATUS_LABELS[data.status];
+          
+          meddpiccTilesHtml += `
+            <div style="background: white; border: 2px solid #1e293b; padding: 16px; margin-bottom: 16px; page-break-inside: avoid;">
+              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                <h3 style="margin: 0; font-size: 18px; font-weight: bold; color: ${color};">${title}</h3>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="background: ${statusColor}; color: white; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: bold;">${statusLabel}</span>
+                  <span style="font-size: 12px; font-weight: 600; color: #64748b;">${Math.round(data.confidence * 100)}%</span>
+                </div>
+              </div>
+              
+              ${data.evidence && data.evidence.length > 0 ? `
+                <div style="margin-bottom: 12px;">
+                  <p style="font-size: 11px; font-weight: bold; color: #64748b; margin: 0 0 6px 0;">EVIDENCE:</p>
+                  ${data.evidence.map(e => `<p style="font-size: 13px; color: #1e293b; margin: 4px 0; padding: 8px; background: #f8fafc; border-radius: 4px;">"${e}"</p>`).join('')}
+                </div>
+              ` : ''}
+              
+              ${data.missing_info && data.missing_info.length > 0 ? `
+                <div>
+                  <p style="font-size: 11px; font-weight: bold; color: #64748b; margin: 0 0 6px 0;">MISSING INFO:</p>
+                  ${data.missing_info.map(m => `<p style="font-size: 13px; color: #64748b; margin: 4px 0;">• ${m}</p>`).join('')}
+                </div>
+              ` : ''}
+              
+              <div style="margin-top: 12px;">
+                <div style="background: #e2e8f0; height: 6px; border-radius: 3px; overflow: hidden;">
+                  <div style="background: ${statusColor}; height: 100%; width: ${Math.round(data.confidence * 100)}%; transition: width 0.3s;"></div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      });
+    }
+
     const html = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>ClosePath Call Analysis</title>
+  <title>ClosePath Call Analysis - ${date}</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
-    h1 { color: #1e293b; border-bottom: 3px solid #3b82f6; padding-bottom: 10px; }
-    h2 { color: #334155; margin-top: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
-    h3 { color: #475569; margin-top: 20px; }
-    .intent { background: #eff6ff; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6; }
-    .status { display: inline-block; padding: 4px 12px; border-radius: 4px; font-weight: 600; font-size: 12px; }
-    .confirmed { background: #10b981; color: white; }
-    .weak { background: #f59e0b; color: white; }
-    .missing { background: #cbd5e1; color: #1e293b; }
-    .evidence { background: #f8fafc; padding: 10px; border-radius: 4px; margin: 10px 0; }
-    .question { background: #fef3c7; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #f59e0b; }
-    .priority { font-weight: 700; text-transform: uppercase; }
-    .high { color: #ef4444; }
-    .medium { color: #f59e0b; }
-    .low { color: #64748b; }
-    .transcript-entry { margin: 10px 0; padding: 10px; background: #f8fafc; border-radius: 4px; }
-    .speaker { font-weight: 700; color: #3b82f6; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
+      max-width: 900px; 
+      margin: 40px auto; 
+      padding: 20px;
+      background: #f8fafc;
+    }
+    .header {
+      background: linear-gradient(135deg, #1e293b 0%, #1e3a5f 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+    }
+    h1 { 
+      margin: 0 0 10px 0; 
+      font-size: 32px;
+      font-weight: 900;
+    }
+    .date {
+      color: #93c5fd;
+      font-size: 14px;
+    }
+    h2 { 
+      color: #1e293b; 
+      margin-top: 40px; 
+      margin-bottom: 20px;
+      font-size: 24px;
+      font-weight: 800;
+      border-bottom: 3px solid #3b82f6; 
+      padding-bottom: 10px; 
+    }
+    .intent-card {
+      background: ${intentBg};
+      border: 3px solid ${intentColor};
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      page-break-inside: avoid;
+    }
+    .intent-level {
+      display: inline-block;
+      background: ${intentColor};
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 24px;
+      font-weight: 900;
+      margin-bottom: 16px;
+    }
+    .meddpicc-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+    @media print {
+      .meddpicc-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .question {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin-bottom: 16px;
+      border-radius: 4px;
+      page-break-inside: avoid;
+    }
+    .question h3 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+      color: #1e293b;
+    }
+    .priority-high { color: #ef4444; font-weight: 700; }
+    .priority-medium { color: #f59e0b; font-weight: 700; }
+    .priority-low { color: #64748b; font-weight: 700; }
+    .transcript-entry {
+      padding: 12px;
+      margin: 8px 0;
+      background: white;
+      border-radius: 4px;
+      border-left: 3px solid #3b82f6;
+    }
+    .speaker {
+      font-weight: 700;
+      color: #3b82f6;
+      margin-right: 8px;
+    }
+    @media print {
+      body { background: white; }
+      .header { background: #1e293b !important; }
+    }
   </style>
 </head>
 <body>
-  ${markdown.replace(/^# (.*?)$/gm, '<h1>$1</h1>')
-           .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
-           .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
-           .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-           .replace(/^- (.*?)$/gm, '<li>$1</li>')
-           .replace(/\n\n/g, '</p><p>')}
+  <div class="header">
+    <h1>ClosePath Call Analysis</h1>
+    <div class="date">${date} at ${time}</div>
+  </div>
+
+  <h2>🎯 Intent Confidence</h2>
+  <div class="intent-card">
+    <div class="intent-level">${intentScore?.level?.toUpperCase() || 'N/A'}</div>
+    ${intentScore?.reasoning ? `
+      <div style="margin-top: 16px;">
+        <p style="font-weight: 700; margin: 0 0 8px 0;">Reasoning:</p>
+        ${intentScore.reasoning.map(r => `<p style="margin: 4px 0;">• ${r}</p>`).join('')}
+      </div>
+    ` : ''}
+    ${intentScore?.deal_risk_flags && intentScore.deal_risk_flags.length > 0 ? `
+      <div style="margin-top: 16px;">
+        <p style="font-weight: 700; margin: 0 0 8px 0; color: #ef4444;">⚠️ Risk Flags:</p>
+        ${intentScore.deal_risk_flags.map(r => `<p style="margin: 4px 0; color: #991b1b;">• ${r}</p>`).join('')}
+      </div>
+    ` : ''}
+  </div>
+
+  <h2>📊 MEDDPICC Scorecard</h2>
+  <div class="meddpicc-grid">
+    ${meddpiccTilesHtml}
+  </div>
+
+  ${suggestedQuestions && suggestedQuestions.length > 0 ? `
+    <h2>❓ Suggested Questions</h2>
+    ${suggestedQuestions.map(q => `
+      <div class="question">
+        <h3>${q.question}</h3>
+        <p style="margin: 4px 0;"><span class="priority-${q.priority}">${q.priority.toUpperCase()}</span> • ${q.meddpicc_area.replace(/_/g, ' ')}</p>
+        <p style="margin: 8px 0 0 0; font-size: 13px; color: #64748b;">${q.why_now}</p>
+      </div>
+    `).join('')}
+  ` : ''}
 </body>
 </html>`;
 
@@ -710,17 +851,20 @@ const ClosePath = () => {
                 )}
               </button>
 
-              {/* Export Button - Only show when call is complete and has data */}
+              {/* Export Dropdown - Only show when call is complete and has data */}
               {!isCallActive && meddpiccState && (
                 <div className="relative group">
-                  <button className="px-6 py-3 rounded-lg font-bold transition-all flex items-center gap-2 bg-blue-500 hover:bg-blue-600">
+                  <button className="p-3 rounded-lg font-bold transition-all bg-blue-500 hover:bg-blue-600 flex items-center gap-2">
                     <Download className="w-5 h-5" />
-                    Export
                   </button>
                   
-                  {/* Export Dropdown */}
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border-2 border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                  {/* Export Dropdown Menu */}
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border-2 border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
                     <div className="py-2">
+                      <div className="px-4 py-2 border-b border-slate-200">
+                        <p className="text-xs font-bold text-slate-600 uppercase">Export Call Analysis</p>
+                      </div>
+                      
                       <button
                         onClick={exportToNotion}
                         className="w-full px-4 py-3 text-left hover:bg-slate-100 transition-colors flex items-center gap-3"
@@ -739,7 +883,7 @@ const ClosePath = () => {
                         <span className="text-2xl">📄</span>
                         <div>
                           <div className="font-bold text-slate-900">PDF/HTML</div>
-                          <div className="text-xs text-slate-600">Download file</div>
+                          <div className="text-xs text-slate-600">Visual report</div>
                         </div>
                       </button>
                       
@@ -749,19 +893,8 @@ const ClosePath = () => {
                       >
                         <span className="text-2xl">🍎</span>
                         <div>
-                          <div className="font-bold text-slate-900">Apple Notes / OneNote</div>
-                          <div className="text-xs text-slate-600">Download as text</div>
-                        </div>
-                      </button>
-                      
-                      <button
-                        onClick={exportToJSON}
-                        className="w-full px-4 py-3 text-left hover:bg-slate-100 transition-colors flex items-center gap-3"
-                      >
-                        <span className="text-2xl">🔧</span>
-                        <div>
-                          <div className="font-bold text-slate-900">JSON</div>
-                          <div className="text-xs text-slate-600">Raw data export</div>
+                          <div className="font-bold text-slate-900">Notes / OneNote</div>
+                          <div className="text-xs text-slate-600">Plain text format</div>
                         </div>
                       </button>
                     </div>
