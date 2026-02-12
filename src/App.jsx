@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Phone, PhoneOff, AlertCircle, CheckCircle2, Circle, ChevronRight, Zap, TrendingUp, Users, Clock, Target, Award } from 'lucide-react';
+import { Mic, MicOff, Phone, PhoneOff, AlertCircle, CheckCircle2, Circle, ChevronRight, Zap, TrendingUp, Users, Clock, Target, Award, Download } from 'lucide-react';
 
 // MEDDPICC Component Status Colors
 const STATUS_COLORS = {
@@ -430,6 +430,166 @@ const ClosePath = () => {
     setIsMuted(!isMuted);
   };
 
+  // EXPORT FUNCTIONS
+  const exportToPDF = () => {
+    const content = generateExportContent();
+    const blob = new Blob([content.html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `closepath-call-analysis-${new Date().toISOString().split('T')[0]}.html`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToNotion = () => {
+    const content = generateExportContent();
+    navigator.clipboard.writeText(content.markdown);
+    alert('✓ Copied to clipboard! Paste into Notion.');
+  };
+
+  const exportToAppleNotes = () => {
+    const content = generateExportContent();
+    const blob = new Blob([content.markdown], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `closepath-call-${new Date().toISOString().split('T')[0]}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToJSON = () => {
+    const data = {
+      timestamp: new Date().toISOString(),
+      meddpicc: meddpiccState,
+      intent_score: intentScore,
+      suggested_questions: suggestedQuestions,
+      transcript: transcript
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `closepath-data-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const generateExportContent = () => {
+    const date = new Date().toLocaleDateString();
+    const time = new Date().toLocaleTimeString();
+    
+    // Markdown format (for Notion, Apple Notes, OneNote)
+    let markdown = `# ClosePath Call Analysis\n`;
+    markdown += `**Date:** ${date} ${time}\n\n`;
+    
+    // Intent Score
+    markdown += `## 🎯 Intent Confidence: ${intentScore?.level?.toUpperCase() || 'N/A'}\n\n`;
+    if (intentScore?.reasoning) {
+      markdown += `**Reasoning:**\n`;
+      intentScore.reasoning.forEach(r => markdown += `- ${r}\n`);
+      markdown += `\n`;
+    }
+    if (intentScore?.deal_risk_flags && intentScore.deal_risk_flags.length > 0) {
+      markdown += `**⚠️ Risk Flags:**\n`;
+      intentScore.deal_risk_flags.forEach(r => markdown += `- ${r}\n`);
+      markdown += `\n`;
+    }
+
+    // MEDDPICC
+    markdown += `## 📊 MEDDPICC Scorecard\n\n`;
+    if (meddpiccState) {
+      const sections = [
+        { key: 'metrics', title: 'Metrics' },
+        { key: 'economic_buyer', title: 'Economic Buyer' },
+        { key: 'decision_process', title: 'Decision Process' },
+        { key: 'decision_criteria', title: 'Decision Criteria' },
+        { key: 'pain', title: 'Pain' },
+        { key: 'implications', title: 'Implications' },
+        { key: 'champion', title: 'Champion' },
+        { key: 'competition', title: 'Competition' }
+      ];
+
+      sections.forEach(({ key, title }) => {
+        const data = meddpiccState[key];
+        if (data) {
+          markdown += `### ${title}\n`;
+          markdown += `**Status:** ${STATUS_LABELS[data.status]} (${Math.round(data.confidence * 100)}% confidence)\n\n`;
+          
+          if (data.evidence && data.evidence.length > 0) {
+            markdown += `**Evidence:**\n`;
+            data.evidence.forEach(e => markdown += `- "${e}"\n`);
+            markdown += `\n`;
+          }
+          
+          if (data.missing_info && data.missing_info.length > 0) {
+            markdown += `**Missing:**\n`;
+            data.missing_info.forEach(m => markdown += `- ${m}\n`);
+            markdown += `\n`;
+          }
+        }
+      });
+    }
+
+    // Suggested Questions
+    if (suggestedQuestions && suggestedQuestions.length > 0) {
+      markdown += `## ❓ Suggested Questions\n\n`;
+      suggestedQuestions.forEach(q => {
+        markdown += `### ${q.question}\n`;
+        markdown += `- **Priority:** ${q.priority.toUpperCase()}\n`;
+        markdown += `- **Area:** ${q.meddpicc_area.replace(/_/g, ' ')}\n`;
+        markdown += `- **Why now:** ${q.why_now}\n\n`;
+      });
+    }
+
+    // Transcript
+    markdown += `## 💬 Transcript\n\n`;
+    transcript.forEach(entry => {
+      const speaker = entry.speaker === 'rep' ? 'Rep' : 'Prospect';
+      markdown += `**${speaker}:** ${entry.text}\n\n`;
+    });
+
+    // HTML format (for PDF)
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>ClosePath Call Analysis</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+    h1 { color: #1e293b; border-bottom: 3px solid #3b82f6; padding-bottom: 10px; }
+    h2 { color: #334155; margin-top: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+    h3 { color: #475569; margin-top: 20px; }
+    .intent { background: #eff6ff; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6; }
+    .status { display: inline-block; padding: 4px 12px; border-radius: 4px; font-weight: 600; font-size: 12px; }
+    .confirmed { background: #10b981; color: white; }
+    .weak { background: #f59e0b; color: white; }
+    .missing { background: #cbd5e1; color: #1e293b; }
+    .evidence { background: #f8fafc; padding: 10px; border-radius: 4px; margin: 10px 0; }
+    .question { background: #fef3c7; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #f59e0b; }
+    .priority { font-weight: 700; text-transform: uppercase; }
+    .high { color: #ef4444; }
+    .medium { color: #f59e0b; }
+    .low { color: #64748b; }
+    .transcript-entry { margin: 10px 0; padding: 10px; background: #f8fafc; border-radius: 4px; }
+    .speaker { font-weight: 700; color: #3b82f6; }
+  </style>
+</head>
+<body>
+  ${markdown.replace(/^# (.*?)$/gm, '<h1>$1</h1>')
+           .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
+           .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
+           .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+           .replace(/^- (.*?)$/gm, '<li>$1</li>')
+           .replace(/\n\n/g, '</p><p>')}
+</body>
+</html>`;
+
+    return { markdown, html };
+  };
+
   const MEDDPICCCard = ({ title, icon: Icon, data, color }) => {
     if (!data) return null;
 
@@ -549,6 +709,65 @@ const ClosePath = () => {
                   </>
                 )}
               </button>
+
+              {/* Export Button - Only show when call is complete and has data */}
+              {!isCallActive && meddpiccState && (
+                <div className="relative group">
+                  <button className="px-6 py-3 rounded-lg font-bold transition-all flex items-center gap-2 bg-blue-500 hover:bg-blue-600">
+                    <Download className="w-5 h-5" />
+                    Export
+                  </button>
+                  
+                  {/* Export Dropdown */}
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border-2 border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                    <div className="py-2">
+                      <button
+                        onClick={exportToNotion}
+                        className="w-full px-4 py-3 text-left hover:bg-slate-100 transition-colors flex items-center gap-3"
+                      >
+                        <span className="text-2xl">📝</span>
+                        <div>
+                          <div className="font-bold text-slate-900">Notion</div>
+                          <div className="text-xs text-slate-600">Copy to clipboard</div>
+                        </div>
+                      </button>
+                      
+                      <button
+                        onClick={exportToPDF}
+                        className="w-full px-4 py-3 text-left hover:bg-slate-100 transition-colors flex items-center gap-3"
+                      >
+                        <span className="text-2xl">📄</span>
+                        <div>
+                          <div className="font-bold text-slate-900">PDF/HTML</div>
+                          <div className="text-xs text-slate-600">Download file</div>
+                        </div>
+                      </button>
+                      
+                      <button
+                        onClick={exportToAppleNotes}
+                        className="w-full px-4 py-3 text-left hover:bg-slate-100 transition-colors flex items-center gap-3"
+                      >
+                        <span className="text-2xl">🍎</span>
+                        <div>
+                          <div className="font-bold text-slate-900">Apple Notes / OneNote</div>
+                          <div className="text-xs text-slate-600">Download as text</div>
+                        </div>
+                      </button>
+                      
+                      <button
+                        onClick={exportToJSON}
+                        className="w-full px-4 py-3 text-left hover:bg-slate-100 transition-colors flex items-center gap-3"
+                      >
+                        <span className="text-2xl">🔧</span>
+                        <div>
+                          <div className="font-bold text-slate-900">JSON</div>
+                          <div className="text-xs text-slate-600">Raw data export</div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
