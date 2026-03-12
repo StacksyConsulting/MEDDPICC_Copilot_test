@@ -50,6 +50,7 @@ const ClosePath = () => {
   const transcriptCountRef = useRef(0);
   const lastSpeechTimeRef = useRef(Date.now());
   const silenceThresholdMs = 2000; // 2 seconds of silence = new speaker
+  const pauseThresholdMs = 800; // 800ms pause = trigger analysis (natural conversational break)
 
   // Auto-scroll transcript container only — scoped to that element, won't affect the page
   useEffect(() => {
@@ -58,6 +59,22 @@ const ClosePath = () => {
       container.scrollTop = container.scrollHeight;
     }
   }, [transcript]);
+
+  // PAUSE DETECTION: Trigger analysis after natural pauses
+  useEffect(() => {
+    if (!isCallActive || transcript.length === 0) return;
+
+    const pauseTimer = setTimeout(() => {
+      const timeSinceLastSpeech = Date.now() - lastSpeechTimeRef.current;
+      
+      // If there's been a pause (natural break in conversation), analyze
+      if (timeSinceLastSpeech >= pauseThresholdMs) {
+        analyzeTranscript(transcript);
+      }
+    }, pauseThresholdMs);
+
+    return () => clearTimeout(pauseTimer);
+  }, [transcript, isCallActive]);
 
   // Initialize Web Speech API for live transcription
   useEffect(() => {
@@ -127,15 +144,8 @@ const ClosePath = () => {
         setTranscript(prev => {
           const updated = [...prev, newEntry];
           
-          // SMART TRIGGERING: Analyze on keywords OR every 3 entries
-          const hasKeywords = /budget|decision|problem|pain|timeline|process|buyer|cost|\$/i.test(finalTranscript);
-          
-          transcriptCountRef.current += 1;
-          
-          // Trigger immediately if important keywords detected, otherwise every 3 entries
-          if (hasKeywords || transcriptCountRef.current % 3 === 0) {
-            analyzeTranscript(updated);
-          }
+          // Pause detection will handle analysis triggering
+          // No need for entry count or keyword detection here anymore
           
           return updated;
         });
@@ -229,7 +239,8 @@ const ClosePath = () => {
         },
         body: JSON.stringify({
           transcript: recentTranscript,
-          callId: callId
+          callId: callId,
+          stream: true // Request streaming response
         })
       });
 
@@ -247,17 +258,68 @@ const ClosePath = () => {
         throw new Error(`API request failed: ${response.status}`);
       }
 
-      const result = await response.json();
+      // STREAMING: Process response as it arrives
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
 
-      setMeddpiccState(result.meddpicc);
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Try to parse complete JSON objects from buffer
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+        
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          
+          try {
+            const chunk = JSON.parse(line);
+            
+            // Update tiles progressively as data streams in
+            if (chunk.meddpicc) {
+              setMeddpiccState(prev => ({
+                ...prev,
+                ...chunk.meddpicc
+              }));
+            }
+            
+            if (chunk.intent_confidence) {
+              setIntentScore(chunk.intent_confidence);
+            }
+            
+            if (chunk.suggested_questions) {
+              const newQuestions = chunk.suggested_questions
+                .filter(q => !askedQuestions.includes(q.question))
+                .slice(0, 5);
+              setSuggestedQuestions(newQuestions);
+            }
+          } catch (e) {
+            // Incomplete JSON, continue buffering
+          }
+        }
+      }
       
-      // Filter out questions that have been asked, then cap at 5
-      const newQuestions = (result.suggested_questions || [])
-        .filter(q => !askedQuestions.includes(q.question))
-        .slice(0, 5);
-      
-      setSuggestedQuestions(newQuestions);
-      setIntentScore(result.intent_confidence);
+      // Process any remaining buffer
+      if (buffer.trim()) {
+        try {
+          const finalChunk = JSON.parse(buffer);
+          if (finalChunk.meddpicc) setMeddpiccState(finalChunk.meddpicc);
+          if (finalChunk.intent_confidence) setIntentScore(finalChunk.intent_confidence);
+          if (finalChunk.suggested_questions) {
+            const newQuestions = finalChunk.suggested_questions
+              .filter(q => !askedQuestions.includes(q.question))
+              .slice(0, 5);
+            setSuggestedQuestions(newQuestions);
+          }
+        } catch (e) {
+          console.error('Final buffer parse error:', e);
+        }
+      }
 
     } catch (error) {
       console.error('Analysis error:', error);

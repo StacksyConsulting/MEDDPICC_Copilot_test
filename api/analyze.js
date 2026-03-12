@@ -5,7 +5,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { transcript, callId } = req.body;
+    const { transcript, callId, stream } = req.body;
 
     if (!transcript || !Array.isArray(transcript)) {
       return res.status(400).json({ error: 'Invalid transcript data' });
@@ -94,6 +94,7 @@ Intent Confidence:
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 2000,
+        stream: stream || false, // Enable streaming if requested
         system: [
           {
             type: "text",
@@ -116,6 +117,50 @@ Intent Confidence:
       });
     }
 
+    // STREAMING RESPONSE
+    if (stream) {
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Transfer-Encoding', 'chunked');
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+        
+        // Parse SSE format
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+            
+            try {
+              const event = JSON.parse(data);
+              
+              if (event.type === 'content_block_delta' && event.delta?.text) {
+                // Send progressive text chunks to client
+                res.write(event.delta.text);
+              }
+            } catch (e) {
+              // Ignore parse errors for incomplete chunks
+            }
+          }
+        }
+      }
+      
+      res.end();
+      return;
+    }
+
+    // NON-STREAMING RESPONSE (fallback)
     const data = await response.json();
     
     // Extract JSON from response
