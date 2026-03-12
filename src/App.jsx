@@ -51,6 +51,8 @@ const ClosePath = () => {
   const lastSpeechTimeRef = useRef(Date.now());
   const silenceThresholdMs = 2000; // 2 seconds of silence = new speaker
   const pauseThresholdMs = 800; // 800ms pause = trigger analysis (natural conversational break)
+  const minAnalysisIntervalMs = 3000; // Minimum 3 seconds between analyses (prevent spam)
+  const lastAnalysisTimeRef = useRef(0);
 
   // Auto-scroll transcript container only — scoped to that element, won't affect the page
   useEffect(() => {
@@ -60,15 +62,19 @@ const ClosePath = () => {
     }
   }, [transcript]);
 
-  // PAUSE DETECTION: Trigger analysis after natural pauses
+  // PAUSE DETECTION: Trigger analysis after natural pauses (with debouncing)
   useEffect(() => {
     if (!isCallActive || transcript.length === 0) return;
 
     const pauseTimer = setTimeout(() => {
       const timeSinceLastSpeech = Date.now() - lastSpeechTimeRef.current;
+      const timeSinceLastAnalysis = Date.now() - lastAnalysisTimeRef.current;
       
-      // If there's been a pause (natural break in conversation), analyze
-      if (timeSinceLastSpeech >= pauseThresholdMs) {
+      // Only analyze if:
+      // 1. There's been a pause (natural break)
+      // 2. Enough time has passed since last analysis (debounce)
+      if (timeSinceLastSpeech >= pauseThresholdMs && timeSinceLastAnalysis >= minAnalysisIntervalMs) {
+        lastAnalysisTimeRef.current = Date.now();
         analyzeTranscript(transcript);
       }
     }, pauseThresholdMs);
